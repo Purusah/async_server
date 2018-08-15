@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/html">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+    <form method="post" action="/login">
+        <div>
+            <label for="login"> Type your name:</label>
+            <input type="text" id="login" name="name">Name</input>
+        </div>
+        <div>
+            <input type="submit">
+        </div>
+
+        <div>
+            {% if cookie == None %}
+                <p id="no_cookie">You have no cookies</p>
+            {% else %}
+                <p id="cookie">Your cookie is: {{cookie}}</p>
+            {% end %}
+        </div>
+        <div>
+            {% if name == None %}
+                <p id="no_name">You are not loggined</p>
+            {% else %}
+                <p id="name">Your name: {{name}}</p>
+            {% end %}
+        </div>
+    </form>
+</body>
+</html>

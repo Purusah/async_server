@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+    <a href="/login">login</a>
+    <div>
+        {% if cookie == None %}
+            <p id="no_cookie">You have no cookies</p>
+        {% else %}
+            <p id="cookie">Your cookie is: {{cookie}}</p>
+        {% end %}
+    </div>
+    <div>
+        {% if name == None %}
+            <p id="no_name">You are not loggined</p>
+        {% else %}
+            <p id="name">Your name: {{name}}</p>
+        {% end %}
+    </div>
+
+</body>
+</html>

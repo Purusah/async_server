@@ -62,17 +62,19 @@ class LoginHandler(MainHandler):
         self.render("login.html", cookie=cookies, name=user_name)
 
     async def post(self):
-        name = self.get_body_argument("name")
-        if bool(name):
+        user_login = self.get_body_argument("login")
+        user_password = self.get_body_argument("password")
+        if bool(user_login) and bool(user_password):
             cookie = super()._have_cookies()
-            await self._set_name(name, cookie)
+            # TODO add validation for unique user_login
+            await self._set_credentials(user_login, user_password, cookie)
             self.redirect("/")
             return
         else:
             self.redirect("/login")
             return
 
-    async def _set_name(self, name, cookie):
+    async def _set_credentials(self, login, password, cookie):
         if not super()._check_name(cookie):
             query = {
             "name": name,

@@ -3,28 +3,49 @@ import tornado.web
 import tornado.httpserver
 import tornado.options
 from uuid import uuid4
+import time
 import pymongo
 import motor.motor_tornado
 
 
 tornado.options.define("port", default=8000, type=int)
+tornado.options.define("hour_seconds", default=3600, type=int)
 
 
 class MainHandler(tornado.web.RequestHandler):
     _cookie_robin = "Robin8"
+    _cur_time = time.time
 
-    def _set_cookies(self):
-        cookie = str(uuid4())
-        self.set_cookie(self._cookie_robin, cookie)
-        return cookie
+    async def _get_user_info(self):
+        cookies = self._have_cookies()
+        if bool(cookies):
+            user_name = await self._check_name(cookies)
+        else:
+            self._set_cookies()
+            user_name = None
+        return cookies, user_name
+
+    async def get(self):
+        cookies, user_name = await self._get_user_info()
+        self.render("index.html", cookie=cookies, name=user_name)
 
     def _have_cookies(self):
-        cookie = self.cookies.get(self._cookie_robin)
-        return cookie
+        cookies = self.get_cookie(self._cookie_robin, default=None)
+        if not cookies:
+            return None
+        else:
+            return cookies
+
+    def _set_cookies(self):
+        name = self._cookie_robin
+        value = str(uuid4())
+        expires = self._cur_time() + tornado.options.options.hour_seconds
+        # TODO: remove cookies from DB if expired
+        self.set_cookie(name, value, expires=expires)
 
     async def _check_name(self, cookie):
         query = {
-            "cookie": str(cookie)
+            "cookie": cookie
         }
         result = await self.application.db_coll.find_one(query)
         print("Result: ", result)
@@ -33,32 +54,23 @@ class MainHandler(tornado.web.RequestHandler):
         else:
             return None
 
-    async def check_name_cookies(self):
-        cookie = self._have_cookies()
-        if cookie == None:
-            self._set_cookies()
-            res = {
-                "cookie": None,
-                "name": None,
-            }
-        else:
-            name = await self._check_name(cookie)
-            res = {
-                "cookie": cookie,
-                "name": name,
-            }
-        return res
-
-
-    async def get(self):
-        res = await self.check_name_cookies()
-        self.render("index.html", cookie=res.get("cookie"), name=res.get("name"))
-
 
 class LoginHandler(MainHandler):
+
     async def get(self):
-        res = await super().check_name_cookies()
-        self.render("login.html", cookie=res.get("cookie"), name=res.get("name"))
+        cookies, user_name = await super()._get_user_info()
+        self.render("login.html", cookie=cookies, name=user_name)
+
+    async def post(self):
+        name = self.get_body_argument("name")
+        if bool(name):
+            cookie = super()._have_cookies()
+            await self._set_name(name, cookie)
+            self.redirect("/")
+            return
+        else:
+            self.redirect("/login")
+            return
 
     async def _set_name(self, name, cookie):
         if not super()._check_name(cookie):
@@ -75,16 +87,6 @@ class LoginHandler(MainHandler):
                 }
             )
 
-    async def post(self):
-        name = self.get_body_argument("name")
-        if bool(name):
-            cookie = super()._have_cookies()
-            await self._set_name(name, cookie)
-            self.redirect("/")
-            return
-        else:
-            self.redirect("/login")
-            return
 
 
 class ErrorHandler(MainHandler):

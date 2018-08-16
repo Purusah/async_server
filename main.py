@@ -4,13 +4,13 @@ import tornado.httpserver
 import tornado.options
 from uuid import uuid4
 import time
-import pymongo
+import hashlib
 import motor.motor_tornado
 
 
 tornado.options.define("port", default=8000, type=int)
 tornado.options.define("hour_seconds", default=3600, type=int)
-
+SEED = "seed"
 
 class MainHandler(tornado.web.RequestHandler):
     _cookie_robin = "Robin8"
@@ -20,13 +20,15 @@ class MainHandler(tornado.web.RequestHandler):
         cookies = self._have_cookies()
         if bool(cookies):
             user_name = await self._check_name(cookies)
+            balance = await self._check_balance(user_name)
         else:
             self._set_cookies()
             user_name = None
-        return cookies, user_name
+            balance = None
+        return cookies, user_name, balance
 
     async def get(self):
-        cookies, user_name = await self._get_user_info()
+        cookies, user_name, _ = await self._get_user_info()
         self.render("index.html", cookie=cookies, name=user_name)
 
     def _have_cookies(self):
@@ -50,16 +52,28 @@ class MainHandler(tornado.web.RequestHandler):
         result = await self.application.db_coll.find_one(query)
         print("Result: ", result)
         if result:
-            return result.get("name")
+            return result.get("login")
+        else:
+            return None
+
+    async def _check_balance(self, login):
+        query = {
+            "login": login
+        }
+        result = await self.application.db_coll.find_one(query)
+        print("Result: ", result)
+        if result:
+            return result.get("balance")
         else:
             return None
 
 
-class LoginHandler(MainHandler):
+
+class SighUpHandler(MainHandler):
 
     async def get(self):
-        cookies, user_name = await super()._get_user_info()
-        self.render("login.html", cookie=cookies, name=user_name)
+        cookies, user_name, _ = await super()._get_user_info()
+        self.render("sign_up.html", cookie=cookies, name=user_name)
 
     async def post(self):
         user_login = self.get_body_argument("login")
@@ -75,25 +89,31 @@ class LoginHandler(MainHandler):
             return
 
     async def _set_credentials(self, login, password, cookie):
-        if not super()._check_name(cookie):
+        if not await super()._check_name(cookie):
             query = {
-            "name": name,
-            "cookie": str(cookie),
+                "login": login,
+                "password": hashlib.md5(bytes("{}{}".format(password, SEED).encode())).hexdigest(),
+                "cookie": str(cookie),
+                "balance": 0,
             }
-            await self.application.db_coll.insert_one(query) #################
-        else:
-            await self.application.db_coll.update_one(
-                {"cookie": str(cookie)},
-                {
-                    "$set": {"name": name}
-                }
-            )
+            await self.application.db_coll.insert_one(query)
+        # else:
+        #     await self.application.db_coll.update_one(
+        #         {"cookie": str(cookie)},
+        #         {
+        #             "$set": {"name": name}
+        #         }
+        #     )
+
+class MyPageHandler(MainHandler):
+    async def get(self):
+        cookies, name, balance = await super()._get_user_info()
+        self.render("my_page.html", name=name, balance=balance)
+
+    async def post(self):
+        amount = self.get_body_argument("amount")
 
 
-
-class ErrorHandler(MainHandler):
-    def get(self):
-        super().get()
 
 
 def make_app():
@@ -107,8 +127,8 @@ class Application(tornado.web.Application):
     def __init__(self):
         handlers = [
             (r"/", MainHandler),
-            (r"/login", LoginHandler),
-            (r"/*", ErrorHandler),
+            (r"/login", SighUpHandler),
+            (r"/my_page", MyPageHandler),
         ]
         client = motor.motor_tornado.MotorClient("localhost", 27017)
         self.db = client["users"]

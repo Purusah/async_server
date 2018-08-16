@@ -2,9 +2,21 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>$Title$</title>
+    <title>Title</title>
 </head>
 <body>
-$END$
+    <div><p>Hello, {{ name }}</p></div>
+    <div><p>Your balance: {{ balance }}</p></div>
+
+    <div>
+        <form action="/update">
+            <div>
+                <input type="text" id="amount" name="amount">Update balance</input>
+            </div>
+            <div>
+                <input type="submit">
+            </div>
+        </form>
+    </div>
 </body>
 </html>

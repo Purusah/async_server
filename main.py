@@ -115,16 +115,20 @@ class MyPageHandler(MainHandler):
 
     async def post(self):
         amount = self.get_body_argument("amount")
-        print("Amount: ", amount)
-        response = await super().client.request("update_balance", amount)
-        _, login, _ = super()._get_user_info()
-        self.update_balance(login, amount)
+        print("Amount: ", type(amount))
+        params = {
+            "amount": int(amount)
+        }
+        response = await super().client.request("update_balance", params)
+        _, login, _ = await super()._get_user_info()
+        await self.update_balance(login, amount)
 
     async def update_balance(self, login, amount):
         query = {
             "login": login
         }
-        current_balance = self.application.db_coll.find_one(query)["balance"]
+        user_info = await self.application.db_coll.find_one(query)
+        current_balance = user_info["balance"]
         await self.application.db_coll.update_one(
             {
                 "login": login

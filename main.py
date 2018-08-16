@@ -6,15 +6,20 @@ from uuid import uuid4
 import time
 import hashlib
 import motor.motor_tornado
+from jsonrpcclient.tornado_client import TornadoClient
 
 
 tornado.options.define("port", default=8000, type=int)
 tornado.options.define("hour_seconds", default=3600, type=int)
 SEED = "seed"
 
+
+
 class MainHandler(tornado.web.RequestHandler):
     _cookie_robin = "Robin8"
     _cur_time = time.time
+
+    client = TornadoClient("http://localhost:8001/")
 
     async def _get_user_info(self):
         cookies = self._have_cookies()
@@ -50,7 +55,6 @@ class MainHandler(tornado.web.RequestHandler):
             "cookie": cookie
         }
         result = await self.application.db_coll.find_one(query)
-        print("Result: ", result)
         if result:
             return result.get("login")
         else:
@@ -61,7 +65,6 @@ class MainHandler(tornado.web.RequestHandler):
             "login": login
         }
         result = await self.application.db_coll.find_one(query)
-        print("Result: ", result)
         if result:
             return result.get("balance")
         else:
@@ -107,13 +110,30 @@ class SighUpHandler(MainHandler):
 
 class MyPageHandler(MainHandler):
     async def get(self):
-        cookies, name, balance = await super()._get_user_info()
-        self.render("my_page.html", name=name, balance=balance)
+        cookies, login, balance = await super()._get_user_info()
+        self.render("my_page.html", name=login, balance=balance)
 
     async def post(self):
         amount = self.get_body_argument("amount")
+        print("Amount: ", amount)
+        response = await super().client.request("update_balance", amount)
+        _, login, _ = super()._get_user_info()
+        self.update_balance(login, amount)
 
-
+    async def update_balance(self, login, amount):
+        query = {
+            "login": login
+        }
+        current_balance = self.application.db_coll.find_one(query)["balance"]
+        await self.application.db_coll.update_one(
+            {
+                "login": login
+            },
+            {
+                "$set": {"balance": amount + current_balance}
+            }
+        )
+        self.redirect("/my_page")
 
 
 def make_app():

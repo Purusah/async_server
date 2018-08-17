@@ -14,7 +14,6 @@ tornado.options.define("hour_seconds", default=3600, type=int)
 SEED = "seed"
 
 
-
 class MainHandler(tornado.web.RequestHandler):
     _cookie_robin = "Robin8"
     _cur_time = time.time

@@ -71,7 +71,6 @@ class MainHandler(tornado.web.RequestHandler):
             return None
 
 
-
 class SighUpHandler(MainHandler):
 
     async def get(self):
@@ -108,9 +107,21 @@ class SighUpHandler(MainHandler):
         #         }
         #     )
 
+class SignInHandler(MainHandler):
+    async def get(self):
+        cookies, login, balance = await super()._get_user_info()
+        if bool(login):
+            self.redirect("/my_page")
+            return
+        self.render("sign_in.html", name=login, balance=balance)
+
+
 class MyPageHandler(MainHandler):
     async def get(self):
         cookies, login, balance = await super()._get_user_info()
+        if bool(login):
+            self.redirect("/login")
+            return
         self.render("my_page.html", name=login, balance=balance)
 
     async def post(self):
@@ -137,7 +148,16 @@ class MyPageHandler(MainHandler):
                 "$set": {"balance": amount + current_balance}
             }
         )
+        self.make_bet(7, amount)
         self.redirect("/my_page")
+
+    # async def make_bet(self, number, amount):
+    #     params = {
+    #         "number": number,
+    #         "amount": amount,
+    #     }
+    #     response = await ().client.request("make_bet", params)
+    #     self.write(response)
 
 
 def make_app():
@@ -153,6 +173,7 @@ class Application(tornado.web.Application):
             (r"/", MainHandler),
             (r"/login", SighUpHandler),
             (r"/my_page", MyPageHandler),
+            (r"/sign_in", SignInHandler),
         ]
         client = motor.motor_tornado.MotorClient("localhost", 27017)
         self.db = client["users"]

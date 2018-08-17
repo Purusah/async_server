@@ -1,10 +1,24 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" xmlns="http://www.w3.org/1999/html">
 <head>
     <meta charset="UTF-8">
     <title>Title</title>
 </head>
 <body>
-
+    <h1>Sign In</h1>
+    <form method="post" action="/sign_in">
+        <div>
+            <label for="login"> Type your name:</label>
+            <div>
+                <input type="text" id="login" name="login">Username</input>
+            </div>
+            <div>
+                <input type="password" id="password" name="password">Password</input>
+            </div>
+        </div>
+        <div>
+            <input type="submit">
+        </div>
+    </form>
 </body>
 </html>
